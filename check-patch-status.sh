@@ -8,12 +8,12 @@
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
+CYAN='\033[1;36m'
 NC='\033[0m' # No Color
 
 LOG_FILE="/var/log/security-updates.log"
 
-echo -e "${BLUE}=== Server Patch Status ===${NC}\n"
+echo -e "${CYAN}=== Server Patch Status ===${NC}\n"
 
 # Check last patch time from log file
 if [ -f "${LOG_FILE}" ]; then
@@ -55,7 +55,7 @@ echo ""
 if [ -f "/var/log/dpkg.log" ]; then
     LAST_DPKG_UPDATE=$(grep "status installed" /var/log/dpkg.log 2>/dev/null | tail -1 | awk '{print $1, $2}' || echo "")
     if [ -n "${LAST_DPKG_UPDATE}" ]; then
-        echo -e "${BLUE}Last package update (system-wide):${NC} ${LAST_DPKG_UPDATE}"
+        echo -e "${CYAN}Last package update (system-wide):${NC} ${LAST_DPKG_UPDATE}"
     fi
 fi
 
@@ -77,7 +77,7 @@ if command -v apt &> /dev/null; then
     else
         echo -e "${GREEN}✓ No pending security updates${NC}"
         if [ "${PENDING_TOTAL}" -gt 0 ]; then
-            echo -e "  ${BLUE}  (Non-security updates available: ${PENDING_TOTAL})${NC}"
+            echo -e "  ${CYAN}  (Non-security updates available: ${PENDING_TOTAL})${NC}"
         fi
     fi
 else
@@ -103,10 +103,10 @@ echo ""
 if command -v uptime &> /dev/null; then
     UPTIME_INFO=$(uptime -p 2>/dev/null || uptime | awk -F'up ' '{print $2}' | awk -F',' '{print $1}')
     if [ -n "${UPTIME_INFO}" ]; then
-        echo -e "${BLUE}System uptime:${NC} ${UPTIME_INFO}"
+        echo -e "${CYAN}System uptime:${NC} ${UPTIME_INFO}"
     fi
 fi
 
 echo ""
-echo -e "${BLUE}=== End Status ===${NC}"
+echo -e "${CYAN}=== End Status ===${NC}"
 

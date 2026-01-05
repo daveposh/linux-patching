@@ -69,6 +69,38 @@ The following packages are excluded from automatic updates as they typically req
 - **Critical libraries**: `libc6`, `libc6-dev`
 - **System services**: `systemd`, `systemd-sysv`, `dbus`
 
+## Checking Unattended-Upgrades Timer
+
+To check when unattended-upgrades runs automatically, use these commands:
+
+**Quick status:**
+```bash
+systemctl status unattended-upgrades.timer
+systemctl list-timers unattended-upgrades.timer
+```
+
+**See next scheduled run:**
+```bash
+systemctl list-timers --all | grep unattended-upgrades
+```
+
+**Check if timer is enabled:**
+```bash
+systemctl is-enabled unattended-upgrades.timer
+```
+
+**View timer configuration:**
+```bash
+cat /lib/systemd/system/unattended-upgrades.timer
+# or
+cat /etc/systemd/system/unattended-upgrades.timer
+```
+
+**Or use the helper script:**
+```bash
+./check-unattended-timer.sh
+```
+
 ## Checking Patch Status
 
 To quickly verify if your server was patched, use the status check script:
