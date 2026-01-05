@@ -1,0 +1,112 @@
+#!/bin/bash
+
+#
+# Check patch status - Simple way to verify if server was patched
+#
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+LOG_FILE="/var/log/security-updates.log"
+
+echo -e "${BLUE}=== Server Patch Status ===${NC}\n"
+
+# Check last patch time from log file
+if [ -f "${LOG_FILE}" ]; then
+    LAST_PATCH=$(grep "Security Update Script Completed" "${LOG_FILE}" | tail -1 | sed 's/.*at \(.*\) ===.*/\1/' || echo "")
+    LAST_START=$(grep "Security Update Script Started" "${LOG_FILE}" | tail -1 | sed 's/.*at \(.*\) ===.*/\1/' || echo "")
+    
+    if [ -n "${LAST_PATCH}" ]; then
+        echo -e "${GREEN}✓ Last successful patch:${NC} ${LAST_PATCH}"
+        
+        # Calculate days since last patch
+        if command -v date &> /dev/null; then
+            LAST_EPOCH=$(date -d "${LAST_PATCH}" +%s 2>/dev/null || echo "")
+            NOW_EPOCH=$(date +%s 2>/dev/null || echo "")
+            if [ -n "${LAST_EPOCH}" ] && [ -n "${NOW_EPOCH}" ] && [ "${NOW_EPOCH}" -gt "${LAST_EPOCH}" ]; then
+                DAYS_AGO=$(( (NOW_EPOCH - LAST_EPOCH) / 86400 ))
+                if [ "${DAYS_AGO}" -eq 0 ]; then
+                    echo -e "  ${GREEN}  (Today)${NC}"
+                elif [ "${DAYS_AGO}" -eq 1 ]; then
+                    echo -e "  ${YELLOW}  (1 day ago)${NC}"
+                elif [ "${DAYS_AGO}" -lt 7 ]; then
+                    echo -e "  ${YELLOW}  (${DAYS_AGO} days ago)${NC}"
+                else
+                    echo -e "  ${RED}  (${DAYS_AGO} days ago - OLD)${NC}"
+                fi
+            fi
+        fi
+    elif [ -n "${LAST_START}" ]; then
+        echo -e "${YELLOW}⚠ Last patch attempt:${NC} ${LAST_START} (may have failed - check log)"
+    else
+        echo -e "${YELLOW}⚠ No patch history found in log${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠ No patch log file found at ${LOG_FILE}${NC}"
+fi
+
+echo ""
+
+# Check last package update time (from dpkg log)
+if [ -f "/var/log/dpkg.log" ]; then
+    LAST_DPKG_UPDATE=$(grep "status installed" /var/log/dpkg.log 2>/dev/null | tail -1 | awk '{print $1, $2}' || echo "")
+    if [ -n "${LAST_DPKG_UPDATE}" ]; then
+        echo -e "${BLUE}Last package update (system-wide):${NC} ${LAST_DPKG_UPDATE}"
+    fi
+fi
+
+echo ""
+
+# Check for pending security updates (requires apt access)
+if command -v apt &> /dev/null; then
+    # Update package lists if user has permission
+    if [ -w "/var/cache/apt" ] 2>/dev/null || [ "$EUID" -eq 0 ]; then
+        apt update -qq > /dev/null 2>&1
+    fi
+    
+    PENDING_SECURITY=$(apt list --upgradable 2>/dev/null | grep -i security | wc -l || echo "0")
+    PENDING_TOTAL=$(apt list --upgradable 2>/dev/null | grep -c "upgradable" || echo "0")
+    
+    if [ "${PENDING_SECURITY}" -gt 0 ]; then
+        echo -e "${YELLOW}⚠ Pending security updates:${NC} ${PENDING_SECURITY}"
+        echo -e "  ${YELLOW}  (Total upgradable: ${PENDING_TOTAL})${NC}"
+    else
+        echo -e "${GREEN}✓ No pending security updates${NC}"
+        if [ "${PENDING_TOTAL}" -gt 0 ]; then
+            echo -e "  ${BLUE}  (Non-security updates available: ${PENDING_TOTAL})${NC}"
+        fi
+    fi
+else
+    echo -e "${YELLOW}⚠ Cannot check pending updates (apt not available)${NC}"
+fi
+
+echo ""
+
+# Check reboot status
+if [ -f "/var/run/reboot-required" ]; then
+    echo -e "${RED}⚠ REBOOT REQUIRED${NC}"
+    if [ -f "/var/run/reboot-required.pkgs" ]; then
+        echo -e "  ${YELLOW}Packages requiring reboot:${NC}"
+        cat /var/run/reboot-required.pkgs | sed 's/^/    - /'
+    fi
+else
+    echo -e "${GREEN}✓ No reboot required${NC}"
+fi
+
+echo ""
+
+# System uptime
+if command -v uptime &> /dev/null; then
+    UPTIME_INFO=$(uptime -p 2>/dev/null || uptime | awk -F'up ' '{print $2}' | awk -F',' '{print $1}')
+    if [ -n "${UPTIME_INFO}" ]; then
+        echo -e "${BLUE}System uptime:${NC} ${UPTIME_INFO}"
+    fi
+fi
+
+echo ""
+echo -e "${BLUE}=== End Status ===${NC}"
+
