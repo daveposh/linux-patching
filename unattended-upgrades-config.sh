@@ -73,6 +73,8 @@ Unattended-Upgrade::Package-Blacklist {
 EOF
 
 log_info "Package blacklist configuration created at ${BLACKLIST_FILE}"
+log_info "Blacklist contains 11 package patterns (kernel packages, libc6, systemd, dbus)"
+log_info "To verify: cat ${BLACKLIST_FILE}"
 
 # Ensure unattended-upgrades only processes security updates
 if ! grep -q "Unattended-Upgrade::Allowed-Origins" "${CONFIG_FILE}" 2>/dev/null; then

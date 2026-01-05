@@ -2,6 +2,8 @@
 
 #
 # Check unattended-upgrades timer and service status
+# READ-ONLY script - does NOT modify any configuration
+# Only displays status and information about unattended-upgrades
 #
 
 # Colors for output

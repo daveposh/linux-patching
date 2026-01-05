@@ -43,23 +43,26 @@ This script must be run manually or scheduled via cron. It does NOT run automati
 
 This option uses the system's built-in `unattended-upgrades` service which runs automatically via systemd timers (no cron needed).
 
+**Important:** The `unattended-upgrades` package comes WITH a systemd timer/service already installed. The config script just modifies the configuration files.
+
 1. Run the configuration script once:
    ```bash
    sudo ./unattended-upgrades-config.sh
    ```
 
 2. The script will:
-   - Install `unattended-upgrades` if needed
-   - Create a package blacklist to exclude reboot-required packages
-   - Configure the service for automatic security updates
-   - Disable automatic reboots
+   - Install `unattended-upgrades` package if needed (package includes systemd timer/service)
+   - Create/modify config files in `/etc/apt/apt.conf.d/`:
+     - Creates `/etc/apt/apt.conf.d/51unattended-upgrades-no-reboot` (package blacklist)
+     - Modifies `/etc/apt/apt.conf.d/50unattended-upgrades` (disables auto-reboot)
+   - The systemd timer/service already exists (comes with the package)
 
 3. Test the configuration:
    ```bash
    sudo unattended-upgrade --dry-run --debug
    ```
 
-4. **The service runs automatically** - No cron needed! The `unattended-upgrades` service runs via systemd timers (typically runs automatically multiple times per day).
+4. **The service runs automatically** - No cron needed! The `unattended-upgrades` systemd timer runs automatically multiple times per day (this is built into the package, not created by the script).
 
 ## Packages That Are Skipped
 
@@ -69,7 +72,29 @@ The following packages are excluded from automatic updates as they typically req
 - **Critical libraries**: `libc6`, `libc6-dev`
 - **System services**: `systemd`, `systemd-sysv`, `dbus`
 
+## Scripts Overview
+
+- **`apply-security-updates.sh`** - **STANDALONE** script (Option 1)
+  - Completely separate from unattended-upgrades package
+  - Runs manually or via cron
+  - No systemd timers, no config files
+
+- **`unattended-upgrades-config.sh`** - **CONFIGURES** unattended-upgrades service (Option 2)
+  - Installs `unattended-upgrades` package if needed (package includes systemd timer)
+  - Creates `/etc/apt/apt.conf.d/51unattended-upgrades-no-reboot` (blacklist)
+  - Modifies `/etc/apt/apt.conf.d/50unattended-upgrades` (no-reboot setting)
+  - Does NOT create timers (they come with the package!)
+  
+- **`check-unattended-timer.sh`** - **READ-ONLY** status check 
+  - Does NOT modify any configuration files
+  - Only displays information about timer/service status
+  - Safe to run anytime (no changes made)
+
+**Note:** See `ARCHITECTURE.md` for detailed explanation of how these systems work.
+
 ## Checking Unattended-Upgrades Timer
+
+The `check-unattended-timer.sh` script is **read-only** - it only displays information and does NOT configure anything.
 
 To check when unattended-upgrades runs automatically, use these commands:
 
