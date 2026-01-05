@@ -68,12 +68,17 @@ if command -v apt &> /dev/null; then
         apt update -qq > /dev/null 2>&1
     fi
     
-    PENDING_SECURITY=$(apt list --upgradable 2>/dev/null | grep -i security | wc -l || echo "0")
+    PENDING_SECURITY_LIST=$(apt list --upgradable 2>/dev/null | grep -i security | awk -F'/' '{print $1}' || echo "")
+    PENDING_SECURITY=$(echo "${PENDING_SECURITY_LIST}" | grep -v "^$" | wc -l || echo "0")
     PENDING_TOTAL=$(apt list --upgradable 2>/dev/null | grep -c "upgradable" || echo "0")
     
     if [ "${PENDING_SECURITY}" -gt 0 ]; then
         echo -e "${YELLOW}⚠ Pending security updates:${NC} ${PENDING_SECURITY}"
-        echo -e "  ${YELLOW}  (Total upgradable: ${PENDING_TOTAL})${NC}"
+        echo -e "  ${YELLOW}Packages:${NC}"
+        echo "${PENDING_SECURITY_LIST}" | grep -v "^$" | sed 's/^/    - /'
+        if [ "${PENDING_TOTAL}" -gt "${PENDING_SECURITY}" ]; then
+            echo -e "  ${CYAN}  (Total upgradable packages: ${PENDING_TOTAL})${NC}"
+        fi
     else
         echo -e "${GREEN}✓ No pending security updates${NC}"
         if [ "${PENDING_TOTAL}" -gt 0 ]; then
