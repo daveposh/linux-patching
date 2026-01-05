@@ -15,29 +15,35 @@ The scripts filter out kernel packages and other critical system packages that w
 
 ## Quick Start
 
-### Option 1: Manual Updates (Recommended for Testing)
+### Option 1: Manual Script (`apply-security-updates.sh`)
+
+This script must be run manually or scheduled via cron. It does NOT run automatically by default.
 
 1. Make the script executable:
    ```bash
    chmod +x apply-security-updates.sh
    ```
 
-2. Run with sudo:
+2. Run manually with sudo:
    ```bash
    sudo ./apply-security-updates.sh
    ```
 
-3. (Optional) Schedule via cron for daily execution:
+3. **To make it automatic, schedule via cron:**
    ```bash
    # Add to crontab (runs daily at 2 AM)
    sudo crontab -e
-   # Add this line:
-   0 2 * * * /path/to/apply-security-updates.sh
+   # Add this line (update the path to match your script location):
+   0 2 * * * /full/path/to/apply-security-updates.sh
    ```
+
+   **Note:** Without cron scheduling, this script only runs when you manually execute it.
 
 ### Option 2: Automated Updates with unattended-upgrades
 
-1. Run the configuration script:
+This option uses the system's built-in `unattended-upgrades` service which runs automatically via systemd timers (no cron needed).
+
+1. Run the configuration script once:
    ```bash
    sudo ./unattended-upgrades-config.sh
    ```
@@ -45,7 +51,7 @@ The scripts filter out kernel packages and other critical system packages that w
 2. The script will:
    - Install `unattended-upgrades` if needed
    - Create a package blacklist to exclude reboot-required packages
-   - Configure automatic security updates
+   - Configure the service for automatic security updates
    - Disable automatic reboots
 
 3. Test the configuration:
@@ -53,7 +59,7 @@ The scripts filter out kernel packages and other critical system packages that w
    sudo unattended-upgrade --dry-run --debug
    ```
 
-4. The service runs automatically via systemd timer
+4. **The service runs automatically** - No cron needed! The `unattended-upgrades` service runs via systemd timers (typically runs automatically multiple times per day).
 
 ## Packages That Are Skipped
 
