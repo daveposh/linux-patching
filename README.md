@@ -100,19 +100,34 @@ To check when unattended-upgrades runs automatically, use these commands:
 
 **Quick status:**
 ```bash
+# Check for unattended-upgrades timer (newer systems)
 systemctl status unattended-upgrades.timer
-systemctl list-timers unattended-upgrades.timer
+
+# Check for apt-daily timers (older systems)
+systemctl status apt-daily.timer
+systemctl status apt-daily-upgrade.timer
 ```
 
 **See next scheduled run:**
 ```bash
-systemctl list-timers --all | grep unattended-upgrades
+# Newer systems
+systemctl list-timers unattended-upgrades.timer
+
+# Older systems (using apt-daily)
+systemctl list-timers apt-daily.timer apt-daily-upgrade.timer
 ```
 
 **Check if timer is enabled:**
 ```bash
+# Newer systems
 systemctl is-enabled unattended-upgrades.timer
+
+# Older systems
+systemctl is-enabled apt-daily.timer
+systemctl is-enabled apt-daily-upgrade.timer
 ```
+
+**Note:** Some systems use `apt-daily.timer` and `apt-daily-upgrade.timer` instead of `unattended-upgrades.timer`. The `check-unattended-timer.sh` script checks for both methods.
 
 **View timer configuration:**
 ```bash

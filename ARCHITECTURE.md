@@ -61,10 +61,29 @@ This document clarifies how the two update methods work.
 
 ---
 
+## Service Status Explained
+
+**Important:** The `unattended-upgrades.service` showing as "inactive" or "dead" is **NORMAL**!
+
+- The service is designed to run on-demand (triggered by the timer)
+- It exits when finished (doesn't stay running)
+- What matters is the **TIMER** status, not the service status
+- The timer triggers the service periodically
+
+To check if it's working:
+```bash
+systemctl status unattended-upgrades.timer  # Check timer (this is what matters)
+systemctl list-timers unattended-upgrades.timer  # See next run time
+```
+
 ## Common Misconceptions
 
 ❌ **"unattended-upgrades has no timer by default"**
 - ✅ FALSE: The package comes WITH a systemd timer/service
+
+❌ **"Service status should show 'active'"**
+- ✅ FALSE: Service shows inactive/dead when not running (normal)
+- ✅ TRUE: Timer should be enabled and active
 
 ❌ **"apply-security-updates.sh configures unattended-upgrades"**
 - ✅ FALSE: They are completely separate systems
