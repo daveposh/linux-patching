@@ -23,20 +23,58 @@ if [ -f "${LOG_FILE}" ]; then
     if [ -n "${LAST_PATCH}" ]; then
         echo -e "${GREEN}✓ Last successful patch:${NC} ${LAST_PATCH}"
         
-        # Calculate days since last patch
+        # Calculate if it's the same calendar day
         if command -v date &> /dev/null; then
-            LAST_EPOCH=$(date -d "${LAST_PATCH}" +%s 2>/dev/null || echo "")
-            NOW_EPOCH=$(date +%s 2>/dev/null || echo "")
-            if [ -n "${LAST_EPOCH}" ] && [ -n "${NOW_EPOCH}" ] && [ "${NOW_EPOCH}" -gt "${LAST_EPOCH}" ]; then
-                DAYS_AGO=$(( (NOW_EPOCH - LAST_EPOCH) / 86400 ))
-                if [ "${DAYS_AGO}" -eq 0 ]; then
+            # Extract date part (YYYY-MM-DD) from timestamp
+            LAST_DATE=$(echo "${LAST_PATCH}" | awk '{print $1}' || echo "")
+            TODAY_DATE=$(date '+%Y-%m-%d' 2>/dev/null || echo "")
+            
+            if [ -n "${LAST_DATE}" ] && [ -n "${TODAY_DATE}" ]; then
+                if [ "${LAST_DATE}" = "${TODAY_DATE}" ]; then
                     echo -e "  ${GREEN}  (Today)${NC}"
-                elif [ "${DAYS_AGO}" -eq 1 ]; then
-                    echo -e "  ${YELLOW}  (1 day ago)${NC}"
-                elif [ "${DAYS_AGO}" -lt 7 ]; then
-                    echo -e "  ${YELLOW}  (${DAYS_AGO} days ago)${NC}"
                 else
-                    echo -e "  ${RED}  (${DAYS_AGO} days ago - OLD)${NC}"
+                    # Calculate days ago using epoch for accuracy
+                    LAST_EPOCH=$(date -d "${LAST_PATCH}" +%s 2>/dev/null || echo "")
+                    NOW_EPOCH=$(date +%s 2>/dev/null || echo "")
+                    if [ -n "${LAST_EPOCH}" ] && [ -n "${NOW_EPOCH}" ] && [ "${NOW_EPOCH}" -gt "${LAST_EPOCH}" ]; then
+                        DAYS_AGO=$(( (NOW_EPOCH - LAST_EPOCH) / 86400 ))
+                        if [ "${DAYS_AGO}" -eq 1 ]; then
+                            echo -e "  ${YELLOW}  (1 day ago)${NC}"
+                        elif [ "${DAYS_AGO}" -lt 7 ]; then
+                            echo -e "  ${YELLOW}  (${DAYS_AGO} days ago)${NC}"
+                        else
+                            echo -e "  ${RED}  (${DAYS_AGO} days ago - OLD)${NC}"
+                        fi
+                    fi
+                fi
+            fi
+        fi
+        
+        # Extract packages from the last successful update
+        # Find the last successful run by looking for completed entries
+        LAST_COMPLETED_LINE=$(grep -n "Security Update Script Completed" "${LOG_FILE}" | tail -1 | cut -d: -f1)
+        if [ -n "${LAST_COMPLETED_LINE}" ]; then
+            # Find the section between last "Started" and "Completed" for this run
+            LAST_STARTED_LINE=$(sed -n "1,${LAST_COMPLETED_LINE}p" "${LOG_FILE}" | grep -n "Security Update Script Started" | tail -1 | cut -d: -f1)
+            
+            if [ -n "${LAST_STARTED_LINE}" ] && [ "${LAST_STARTED_LINE}" -lt "${LAST_COMPLETED_LINE}" ]; then
+                # Extract lines in this section that contain package names (pattern: "  - package-name")
+                # Strip ANSI color codes first, then extract package names
+                UPDATED_PACKAGES=$(sed -n "${LAST_STARTED_LINE},${LAST_COMPLETED_LINE}p" "${LOG_FILE}" | \
+                    sed 's/\x1b\[[0-9;]*m//g' | \
+                    sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' | \
+                    grep -E "\s+-\s+[a-zA-Z0-9]" | \
+                    sed -E 's/.*-\s+([a-zA-Z0-9][a-zA-Z0-9._-]+).*/\1/' | \
+                    grep -v "^Found" | \
+                    grep -v "^Security" | \
+                    sort -u || echo "")
+                
+                if [ -n "${UPDATED_PACKAGES}" ]; then
+                    PACKAGE_COUNT=$(echo "${UPDATED_PACKAGES}" | grep -v "^$" | wc -l | tr -d ' ')
+                    if [ "${PACKAGE_COUNT}" -gt 0 ] && [ "${PACKAGE_COUNT}" -lt 100 ]; then  # Sanity check
+                        echo -e "  ${CYAN}Packages updated:${NC} ${PACKAGE_COUNT}"
+                        echo "${UPDATED_PACKAGES}" | grep -v "^$" | sed 's/^/    - /'
+                    fi
                 fi
             fi
         fi
