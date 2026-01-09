@@ -1,11 +1,10 @@
-#!/bin/bash
 # Configuration file for apply-security-updates.sh
 # This file is sourced by the script, so it's plain bash syntax
 # 
 # Usage:
-#   1. Copy this file: cp config.sh.example config.sh
-#   2. Edit config.sh with your preferences
-#   3. Script will auto-detect config.sh in same directory or /etc/security-updates/config.sh
+#   1. Copy this file: cp config.conf.example config.conf
+#   2. Edit config.conf with your preferences
+#   3. Script will auto-detect config.conf in same directory or /etc/security-updates/config.conf
 
 ###############################################################################
 # LOGGING CONFIGURATION
@@ -81,6 +80,26 @@ EXIT_IF_NO_UPDATES=false
 ###############################################################################
 # PACKAGE FILTERING
 ###############################################################################
+
+# Packages to allow (whitelist - only update these packages if specified)
+# 
+# If ALLOW_PACKAGES is set and not empty, ONLY packages matching these patterns
+# will be updated. All other packages will be skipped.
+#
+# This is useful for updating specific packages like nginx, apache2, etc.
+# without updating other packages on the system.
+#
+# Format: bash array with package name patterns
+# Patterns support wildcards: "*" matches anything at end
+# Examples:
+#   ALLOW_PACKAGES=()                    = update all available (default behavior)
+#   ALLOW_PACKAGES=("nginx")             = only update nginx package
+#   ALLOW_PACKAGES=("nginx" "apache2")   = only update nginx and apache2
+#   ALLOW_PACKAGES=("nginx-*")           = only update packages starting with nginx-
+# Note: If ALLOW_PACKAGES is set, SKIP_PACKAGES filtering still applies (unless ALLOW_REBOOT_PACKAGES=true)
+#       So if nginx requires reboot and ALLOW_REBOOT_PACKAGES=false, nginx will still be skipped
+#       Set ALLOW_REBOOT_PACKAGES=true if you want to update packages in ALLOW_PACKAGES even if they require reboot
+ALLOW_PACKAGES=()
 
 # Packages to skip (packages that require reboots)
 # 
@@ -158,3 +177,11 @@ REBOOT_REQUIRED_FILE="/var/run/reboot-required"
 #   false = silently skip reboot check warning
 # Note: This only controls whether to WARN if the safety check finds a reboot flag
 WARN_ON_REBOOT_REQUIRED=true
+
+# Allow reboot-required packages to be installed
+# Options: true, false
+#   true  = install packages that normally require reboots (SKIP_PACKAGES are not filtered)
+#   false = skip packages that require reboots (default behavior)
+# Note: This is typically set in profiles for maintenance windows
+# When true, packages in SKIP_PACKAGES will be included in updates
+ALLOW_REBOOT_PACKAGES=false

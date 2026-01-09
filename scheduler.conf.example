@@ -1,0 +1,238 @@
+# Scheduler Configuration for Automated Security Updates
+# This file is sourced by scheduler.sh, so it's plain bash syntax
+#
+# Usage:
+#   1. Copy this file: cp scheduler.conf.example scheduler.conf
+#   2. Enable/configure preconfigured maintenance windows below
+#   3. Optionally add custom windows
+#   4. Script will auto-detect scheduler.conf in same directory or /etc/security-updates/scheduler.conf
+
+###############################################################################
+# SCHEDULER SETTINGS
+###############################################################################
+
+# Enable/disable automated scheduling
+# Options: true, false
+#   true  = scheduler runs automatically via systemd timer
+#   false = scheduler disabled (must run manually)
+SCHEDULER_ENABLED=true
+
+# How often to check for updates (in minutes)
+# Options: integer >= 1
+#   60    = check every hour (recommended)
+#   1440  = check once per day (24 hours * 60 minutes)
+#   720   = check twice per day (12 hours)
+CHECK_INTERVAL_MINUTES=60
+
+# Systemd timer accuracy (random delay to avoid thundering herd)
+# Options: integer >= 0 (in seconds)
+#   0     = no random delay
+#   300   = random delay up to 5 minutes (recommended for distributed systems)
+#   900   = random delay up to 15 minutes
+RANDOM_DELAY_SECONDS=300
+
+###############################################################################
+# DEFAULT UPDATE PROFILE
+###############################################################################
+
+# Default profile to use when no maintenance window is active
+# Options: profile name matching a file in PROFILES_DIR
+# Examples:
+#   "security-no-reboot"    = security updates only, skip reboot packages (default)
+#   "security-with-reboot"  = security updates only, allow reboot packages
+#   "all-no-reboot"         = all updates, skip reboot packages
+#   "all-with-reboot"       = all updates, allow reboot packages
+DEFAULT_PROFILE="security-no-reboot"
+
+# Path to profiles directory
+# Default: "/etc/security-updates/profiles"
+# Can also be relative to script directory: "./profiles"
+PROFILES_DIR="/etc/security-updates/profiles"
+
+###############################################################################
+# PRECONFIGURED MAINTENANCE WINDOWS
+###############################################################################
+
+# Industry-standard maintenance windows that you can enable/disable
+# All preconfigured windows are disabled by default - enable the ones you need
+
+# -----------------------------------------------------------------------------
+# Patch Tuesday Pattern (Microsoft Patch Tuesday - 2nd Tuesday of month)
+# -----------------------------------------------------------------------------
+
+# Non-production patching window (2nd Thursday after Patch Tuesday)
+# This allows testing patches in non-prod before production
+# Options: true, false
+ENABLE_PATCH_TUESDAY_NONPROD=false
+
+# Time window for non-production patching
+# Format: "HH:MM-HH:MM" in 24-hour format
+PATCH_TUESDAY_NONPROD_TIME="02:00-04:00"
+
+# Profile to use during non-production window
+PATCH_TUESDAY_NONPROD_PROFILE="all-with-reboot"
+
+# Production patching window (Thursday after non-prod)
+# Options: true, false
+ENABLE_PATCH_TUESDAY_PROD=false
+
+# Time window for production patching
+# Format: "HH:MM-HH:MM" in 24-hour format
+PATCH_TUESDAY_PROD_TIME="02:00-04:00"
+
+# Profile to use during production window
+PATCH_TUESDAY_PROD_PROFILE="all-with-reboot"
+
+# -----------------------------------------------------------------------------
+# Weekly Sunday Early Morning Maintenance
+# -----------------------------------------------------------------------------
+
+# Weekly maintenance on Sunday morning (most common pattern)
+# Options: true, false
+ENABLE_WEEKLY_SUNDAY=false
+
+# Time window for weekly Sunday maintenance
+# Format: "HH:MM-HH:MM" in 24-hour format
+WEEKLY_SUNDAY_TIME="02:00-04:00"
+
+# Profile to use during Sunday window
+WEEKLY_SUNDAY_PROFILE="all-with-reboot"
+
+# -----------------------------------------------------------------------------
+# Weekly Saturday Early Morning Maintenance
+# -----------------------------------------------------------------------------
+
+# Weekly maintenance on Saturday morning (alternative to Sunday)
+# Options: true, false
+ENABLE_WEEKLY_SATURDAY=false
+
+# Time window for weekly Saturday maintenance
+# Format: "HH:MM-HH:MM" in 24-hour format
+WEEKLY_SATURDAY_TIME="02:00-04:00"
+
+# Profile to use during Saturday window
+WEEKLY_SATURDAY_PROFILE="security-with-reboot"
+
+# -----------------------------------------------------------------------------
+# Daily Early Morning Security Updates
+# -----------------------------------------------------------------------------
+
+# Daily window for urgent security patches (no reboot packages)
+# Options: true, false
+ENABLE_DAILY_EARLY=false
+
+# Time window for daily updates
+# Format: "HH:MM-HH:MM" in 24-hour format
+DAILY_EARLY_TIME="03:00-05:00"
+
+# Profile to use during daily window
+DAILY_EARLY_PROFILE="security-no-reboot"
+
+# -----------------------------------------------------------------------------
+# Monthly First Sunday Extended Maintenance
+# -----------------------------------------------------------------------------
+
+# Extended monthly maintenance on first Sunday
+# Options: true, false
+ENABLE_MONTHLY_FIRST_SUNDAY=false
+
+# Time window for monthly maintenance (extended window)
+# Format: "HH:MM-HH:MM" in 24-hour format
+MONTHLY_FIRST_SUNDAY_TIME="02:00-06:00"
+
+# Profile to use during monthly window
+MONTHLY_FIRST_SUNDAY_PROFILE="all-with-reboot"
+
+###############################################################################
+# CUSTOM MAINTENANCE WINDOWS
+###############################################################################
+
+# Custom maintenance windows (user-defined)
+# Format: Array of window definitions
+# Each window: "DAY START_TIME END_TIME PROFILE_NAME"
+#
+# DAY: Mon, Tue, Wed, Thu, Fri, Sat, Sun, "daily", "weekdays", "weekend"
+# START_TIME: HH:MM in 24-hour format (e.g., "02:00")
+# END_TIME: HH:MM in 24-hour format (e.g., "04:00")
+# PROFILE_NAME: Profile to use during this window (must exist in PROFILES_DIR)
+#
+# Examples:
+#   "Sun 02:00 04:00 all-with-reboot"     = Sunday 2-4 AM, full updates with reboot
+#   "daily 03:00 05:00 security-no-reboot" = Every day 3-5 AM, security only
+#   "weekdays 02:00 03:00 security-with-reboot" = Weekdays 2-3 AM
+#   "weekend 01:00 03:00 all-with-reboot" = Saturday and Sunday 1-3 AM
+#
+# Windows are checked in order - first matching window is used
+# If no window matches, DEFAULT_PROFILE is used
+CUSTOM_WINDOWS=(
+    # Add your custom windows here
+    # "Sun 02:00 04:00 all-with-reboot"
+)
+
+# Timezone for maintenance windows
+# Options: system default, or specific timezone (e.g., "America/New_York", "UTC")
+# Example: "America/New_York"
+# Example: "" (uses system timezone)
+MAINTENANCE_TIMEZONE=""
+
+###############################################################################
+# REBOOT BEHAVIOR (when profile allows reboot packages)
+###############################################################################
+
+# Automatically reboot if required after updates
+# Options: true, false
+#   true  = automatically reboot if reboot-required flag exists
+#   false = only warn, do not reboot automatically (recommended)
+# Note: Only applies when using profiles that allow reboot packages
+AUTO_REBOOT_IF_REQUIRED=false
+
+# Delay before rebooting (in minutes)
+# Options: integer >= 0
+#   0     = reboot immediately
+#   5     = wait 5 minutes before rebooting (gives time to cancel)
+#   30    = wait 30 minutes (recommended for production)
+REBOOT_DELAY_MINUTES=5
+
+# Require confirmation before rebooting
+# Options: true, false
+#   true  = create a file that can be deleted to cancel reboot
+#   false = reboot automatically without confirmation file
+# Note: If true, creates /var/run/security-updates-reboot-cancel to allow cancellation
+REBOOT_REQUIRES_CONFIRMATION=true
+
+###############################################################################
+# NOTIFICATION SETTINGS
+###############################################################################
+
+# Notify before maintenance window starts
+# Options: true, false
+NOTIFY_BEFORE_MAINTENANCE=false
+
+# Notification command (runs before maintenance window)
+# Example: "/usr/local/bin/send-notification.sh"
+# Example: "wall 'Maintenance window starting'"
+# Example: "mail -s 'Maintenance Starting' admin@example.com"
+PRE_MAINTENANCE_NOTIFICATION_CMD=""
+
+# Notify after updates complete
+# Options: true, false
+NOTIFY_AFTER_UPDATES=false
+
+# Notification command (runs after updates)
+# Example: "/usr/local/bin/send-update-summary.sh"
+# Example: "mail -s 'Updates Complete' admin@example.com"
+POST_UPDATE_NOTIFICATION_CMD=""
+
+###############################################################################
+# LOGGING
+###############################################################################
+
+# Scheduler log file
+# Default: "/var/log/security-updates-scheduler.log"
+SCHEDULER_LOG_FILE="/var/log/security-updates-scheduler.log"
+
+# Log scheduler decisions (profile selection, window matching)
+# Options: true, false
+#   true  = log which profile was selected and why (recommended for debugging)
+#   false = minimal logging
+LOG_SCHEDULER_DECISIONS=true

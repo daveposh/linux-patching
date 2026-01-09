@@ -47,16 +47,18 @@ APT_OPTIONS=()
 CHECK_REBOOT_REQUIRED=true
 REBOOT_REQUIRED_FILE="/var/run/reboot-required"
 WARN_ON_REBOOT_REQUIRED=true
+ALLOW_REBOOT_PACKAGES=false
+ALLOW_PACKAGES=()
 
 # Load configuration file if it exists
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${CONFIG_FILE:-}"
 if [ -z "${CONFIG_FILE}" ]; then
     # Try local config first, then system config
-    if [ -f "${SCRIPT_DIR}/config.sh" ]; then
-        CONFIG_FILE="${SCRIPT_DIR}/config.sh"
-    elif [ -f "/etc/security-updates/config.sh" ]; then
-        CONFIG_FILE="/etc/security-updates/config.sh"
+    if [ -f "${SCRIPT_DIR}/config.conf" ]; then
+        CONFIG_FILE="${SCRIPT_DIR}/config.conf"
+    elif [ -f "/etc/security-updates/config.conf" ]; then
+        CONFIG_FILE="/etc/security-updates/config.conf"
     fi
 fi
 
@@ -311,12 +313,48 @@ if [ -z "${AVAILABLE_UPDATES}" ]; then
     exit $([ "${EXIT_IF_NO_UPDATES}" = "true" ] && echo 1 || echo 0)
 fi
 
-# Filter out packages that require reboots
+# Filter packages based on ALLOW_PACKAGES (whitelist) if specified
+FILTERED_UPDATES=()
+if [ ${#ALLOW_PACKAGES[@]} -gt 0 ]; then
+    log_info "Filtering to allowed packages only: ${ALLOW_PACKAGES[*]}"
+    while IFS= read -r package; do
+        [ -z "${package}" ] && continue
+        
+        # Check if package matches any ALLOW_PACKAGES pattern
+        MATCHED=false
+        for allowed_pkg in "${ALLOW_PACKAGES[@]}"; do
+            if [[ "${package}" == ${allowed_pkg}* ]]; then
+                MATCHED=true
+                break
+            fi
+        done
+        
+        if [ "$MATCHED" = true ]; then
+            FILTERED_UPDATES+=("${package}")
+        fi
+    done <<< "${AVAILABLE_UPDATES}"
+    
+    if [ ${#FILTERED_UPDATES[@]} -eq 0 ]; then
+        log_warn "No available updates match the ALLOW_PACKAGES filter: ${ALLOW_PACKAGES[*]}"
+        exit $([ "${EXIT_IF_NO_UPDATES}" = "true" ] && echo 1 || echo 0)
+    fi
+    AVAILABLE_UPDATES=$(printf '%s\n' "${FILTERED_UPDATES[@]}")
+fi
+
+# Filter out packages that require reboots (unless ALLOW_REBOOT_PACKAGES is true)
 SAFE_UPDATES=()
 SKIPPED_PACKAGES=()
 
 while IFS= read -r package; do
     [ -z "${package}" ] && continue
+    
+    # If ALLOW_REBOOT_PACKAGES is true, don't skip any packages
+    if [ "${ALLOW_REBOOT_PACKAGES}" = "true" ]; then
+        SAFE_UPDATES+=("${package}")
+        continue
+    fi
+    
+    # Otherwise, filter out packages that require reboots
     SKIP=false
     for reboot_pkg in "${REBOOT_REQUIRED_PACKAGES[@]}"; do
         if [[ "${package}" == ${reboot_pkg}* ]]; then

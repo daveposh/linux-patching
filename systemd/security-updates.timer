@@ -1,0 +1,17 @@
+[Unit]
+Description=Security Updates Scheduler Timer
+Documentation=man:apply-security-updates(1)
+Requires=security-updates.service
+
+[Timer]
+# Run every hour by default (can be overridden by scheduler.conf)
+OnBootSec=5min
+OnUnitActiveSec=1h
+AccuracySec=5min
+
+# Random delay to avoid thundering herd (default 5 minutes)
+# Can be overridden by RANDOM_DELAY_SECONDS in scheduler.conf
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

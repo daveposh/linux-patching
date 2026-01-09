@@ -1,0 +1,10 @@
+[Unit]
+Description=Security Updates Scheduler
+Documentation=man:apply-security-updates(1)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/security-updates/scheduler.sh
+StandardOutput=journal
+StandardError=journal
+User=root

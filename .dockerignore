@@ -1,0 +1,33 @@
+# Docker ignore file for test builds
+
+# Git files
+.git/
+.gitignore
+
+# Test files (already copied separately)
+test/
+
+# Documentation
+*.md
+!test/README.md
+
+# Log files
+*.log
+
+# Config files (use examples)
+config.conf
+scheduler.conf
+
+# Temporary files
+*~
+*.bak
+*.swp
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
