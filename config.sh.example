@@ -1,0 +1,160 @@
+#!/bin/bash
+# Configuration file for apply-security-updates.sh
+# This file is sourced by the script, so it's plain bash syntax
+# 
+# Usage:
+#   1. Copy this file: cp config.sh.example config.sh
+#   2. Edit config.sh with your preferences
+#   3. Script will auto-detect config.sh in same directory or /etc/security-updates/config.sh
+
+###############################################################################
+# LOGGING CONFIGURATION
+###############################################################################
+
+# Path to log file
+# Example: "/var/log/security-updates.log"
+# Example: "./updates.log"
+LOG_FILE="/var/log/security-updates.log"
+
+# Log format style
+# Options: "standard", "color", "syslog", "iso", "datadog"
+#   standard = plain text with timestamps: "2026-01-05 13:27:05 [INFO] message" (no ANSI codes in file)
+#   color    = current format with ANSI color codes in log file (not standard, harder to parse)
+#   syslog   = syslog format: "Jan  5 13:27:05 hostname script: [INFO] message"
+#   iso      = ISO 8601 format: "2026-01-05T13:27:05+00:00 [INFO] message"
+#   datadog  = JSON format for Datadog log ingestion (ndjson format)
+LOG_FORMAT="standard"
+
+# Enable colored output to console (stdout)
+# Note: If LOG_FORMAT="standard", "iso", "syslog", or "datadog", colors still show on screen but NOT in log file
+# Options: true, false
+COLOR_OUTPUT=true
+
+# Datadog-specific settings (only used when LOG_FORMAT="datadog")
+# Service name for Datadog
+# Example: "security-updates"
+DATADOG_SERVICE="security-updates"
+
+# Source/application name for Datadog
+# Example: "linux-patching"
+DATADOG_SOURCE="linux-patching"
+
+# Environment tag for Datadog
+# Example: "production", "staging", "development"
+# Example: "" (no environment tag)
+DATADOG_ENV=""
+
+# Hostname for Datadog logs (empty = auto-detect from system)
+# Example: "web-server-01"
+# Example: "" (uses system hostname)
+DATADOG_HOST=""
+
+###############################################################################
+# PACKAGE UPDATE SETTINGS
+###############################################################################
+
+# Type of updates to apply
+# Options: "security", "all"
+#   security = only security updates (default, recommended)
+#   all      = all available updates (use with caution)
+UPDATE_TYPE="security"
+
+# Update package lists before checking for updates
+# Options: true, false
+#   true  = run 'apt-get update' first (recommended)
+#   false = use existing package cache (not recommended)
+UPDATE_PACKAGE_LISTS=true
+
+# Verbosity for apt-get update command
+# Options: true, false
+#   true  = quiet mode (-qq flag, minimal output)
+#   false = normal output (shows update progress)
+QUIET_UPDATE=true
+
+# Exit code when no updates are found
+# Options: 0, 1
+#   0 = exit with success (no updates is OK - default)
+#   1 = exit with error code (no updates is a problem)
+# Note: Applies to the UPDATE_TYPE selected (security or all)
+EXIT_IF_NO_UPDATES=false
+
+###############################################################################
+# PACKAGE FILTERING
+###############################################################################
+
+# Packages to skip (packages that require reboots)
+# 
+# ⚠️ CRITICAL: This is the PRIMARY and ONLY mechanism for preventing 
+# reboot-required packages from being installed. If a package matches a 
+# pattern in this list, it WILL NOT be installed - it is filtered out 
+# BEFORE the installation step.
+#
+# Only packages NOT matching any pattern in this list will be updated.
+# 
+# The reboot checking options (CHECK_REBOOT_REQUIRED, WARN_ON_REBOOT_REQUIRED) 
+# do NOT prevent installation - they only perform a post-installation safety 
+# check and warning. If you want to prevent a package from being installed, 
+# you MUST add it to this SKIP_PACKAGES list.
+#
+# Format: bash array with package name patterns
+# Patterns support wildcards: "*" matches anything at end
+# Examples:
+#   "linux-image-*"     matches all linux-image packages (linux-image-5.4, etc.)
+#   "linux-base"        matches exact package name
+#   "libc6"             matches exact package name
+# Note: The script uses pattern matching: if package starts with pattern, it's skipped
+SKIP_PACKAGES=(
+    "linux-image-"
+    "linux-headers-"
+    "linux-modules-"
+    "linux-modules-extra-"
+    "linux-tools-"
+    "linux-cloud-tools-"
+    "linux-base"
+    "libc6"
+    "libc6-dev"
+    "systemd"
+    "systemd-sysv"
+    "dbus"
+)
+
+###############################################################################
+# UPDATE APPLICATION
+###############################################################################
+
+# Additional apt-get install options
+# Format: bash array of extra flags to pass to apt-get install
+# The script automatically adds: -y --only-upgrade
+# Examples:
+#   ()                           = no extra options (default)
+#   ("--fix-broken")            = fix broken dependencies
+#   ("--no-install-recommends") = don't install recommended packages
+#   ("--allow-downgrades")      = allow downgrading packages
+APT_OPTIONS=()
+
+###############################################################################
+# REBOOT CHECKING (POST-INSTALLATION SAFETY CHECK)
+###############################################################################
+
+# IMPORTANT: The script DOES NOT install packages that require reboots.
+# Packages in SKIP_PACKAGES are filtered out BEFORE installation.
+# These options only control a POST-INSTALLATION safety check to verify
+# nothing was missed (in case a package wasn't in the skip list).
+
+# Check if reboot is required after updates (post-installation safety check)
+# Options: true, false
+#   true  = check /var/run/reboot-required file after updates (recommended)
+#   false = skip reboot check
+# Note: This is a safety check only - packages requiring reboot are already filtered out
+CHECK_REBOOT_REQUIRED=true
+
+# Path to reboot required flag file
+# Default: "/var/run/reboot-required"
+REBOOT_REQUIRED_FILE="/var/run/reboot-required"
+
+# Warn if reboot required but not applied (post-installation safety check)
+# Options: true, false
+#   true  = show warning message if reboot flag file exists (recommended)
+#   false = silently skip reboot check warning
+# Note: This only controls whether to WARN if the safety check finds a reboot flag
+WARN_ON_REBOOT_REQUIRED=true
